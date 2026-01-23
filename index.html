@@ -1,21 +1,357 @@
 <!doctype html>
-<html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      /* I used ChatGPT to help me with the original structure because it wasnt formatted properly*/
+      .wrap {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 16px;
+      }
+
+      #toolbar {
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 10px;
+        padding: 12px 14px;
+        border: 1px solid #ddd;
+        background: white;
+        border-radius: 14px;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+      }
+
+      button {
+        border: 1px solid #ccc;
+        background: #fff;
+        padding: 8px 10px;
+        border-radius: 10px;
+        cursor: pointer;
+        font-weight: 600;
+      }
+      button:hover {
+        background: #f0f0f0;
+      }
+
+      #container {
+        padding: 16px 0;
+        display: flex;
+        justify-content: center;
+      }
+
+      svg {
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 14px;
+        display: block;
+      }
+
+      .label {
+        font-size: 14px;
+        fill: #333;
+      }
+
+      #tooltip {
+        position: fixed;
+        pointer-events: none;
+        background: rgba(20, 20, 20, 0.92);
+        color: #fff;
+        padding: 8px 10px;
+        border-radius: 10px;
+        font-size: 12px;
+        line-height: 1.2;
+        opacity: 0;
+        transform: translate(12px, 12px);
+        max-width: 240px;
+      }
+    </style>
+  </head>
+
   <body>
-    <div id="container"></div>
+    <div class="wrap">
+      <div id="toolbar">
+        <button id="btnRect">Rectangles</button>
+        <button id="btnCircle">Circles</button>
+        <button id="btnLine">Lines</button>
+        <button id="btnPoly">Polygon</button>
+        <button id="btnPath">Path</button>
+        <button id="btnAll">Draw All</button>
+        <button id="btnClear">Clear</button>
+      </div>
+
+      <div id="container"></div>
+    </div>
+
+    <div id="tooltip"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
     <script>
-      console.log(d3);
-      // Add an SVG
+      console.log("d3 version:", d3.version);
 
-      // Add Rectangles
+      const W = 900,
+        H = 520;
 
-      // Add Circles
+      const svg = d3
+        .select("#container")
+        .append("svg")
+        .attr("width", W)
+        .attr("height", H);
 
-      // Add Lines
+      svg
+        .append("text")
+        .attr("x", 18)
+        .attr("y", 30)
+        .attr("class", "label")
+        .text("Hover shapes for details • Buttons add more shapes");
 
-      // Add Polygons
-      d3.polygon([[1, 1], [1.5, 0], [2, 1]])
+
+      /* I used ChatGPT to help me with Random color formatting*/
+      function randomColor() {
+        const h = Math.floor(Math.random() * 360);
+        return `hsl(${h}, 75%, 55%)`;
+      }
+
+      function clearCanvas() {
+        svg.selectAll(".shape").remove();
+      }
+
+      const tooltip = d3.select("#tooltip");
+
+      function tipOn(html, e) {
+        tooltip.html(html).style("opacity", 1);
+        tipMove(e);
+      }
+
+      function tipMove(e) {
+        tooltip.style("left", `${e.clientX}px`).style("top", `${e.clientY}px`);
+      }
+
+      function tipOff() {
+        tooltip.style("opacity", 0);
+      }
+      /* I used ChatGPT to debug this hover feature*/
+      function attachHover(selection, getHtml, baseOpacity = 0.9) {
+        selection
+          .on("mousemove", (e) => tipMove(e))
+          .on("mouseenter", function (e, d) {
+            d3.select(this)
+              .interrupt()
+              .attr("opacity", 1)
+              .attr("stroke", "#111")
+              .attr("stroke-width", 2);
+            tipOn(getHtml(d), e);
+          })
+          .on("mouseleave", function () {
+            d3.select(this)
+              .interrupt()
+              .attr("opacity", baseOpacity)
+              .attr("stroke", null)
+              .attr("stroke-width", null);
+            tipOff();
+          });
+      }
+
+      function drawRectangles() {
+        const rects = [
+          { x: 70, y: 70, w: 190, h: 120 },
+          { x: 110, y: 110, w: 120, h: 70 },
+        ];
+
+        const sel = svg
+          .selectAll("rect.shape")
+          .data(rects, (d, i) => `r${i}`)
+          .enter()
+          .append("rect")
+          .attr("class", "shape")
+          .attr("x", (d) => d.x)
+          .attr("y", (d) => d.y)
+          .attr("width", 0)
+          .attr("height", (d) => d.h)
+          .attr("fill", () => randomColor())
+          .attr("opacity", 0.9);
+
+        sel
+          .transition()
+          .duration(600)
+          .attr("width", (d) => d.w);
+
+        attachHover(
+          sel,
+          (d) => {
+            const area = d.w * d.h;
+            return `<b>Rectangle</b><br/>w: ${d.w}, h: ${d.h}<br/>area: ${area}`;
+          },
+          0.9,
+        );
+      }
+
+      function drawCircles() {
+        const circles = [
+          { cx: 360, cy: 140, r: 55 },
+          { cx: 430, cy: 170, r: 30 },
+        ];
+
+        const sel = svg
+          .selectAll("circle.shape")
+          .data(circles, (d, i) => `c${i}`)
+          .enter()
+          .append("circle")
+          .attr("class", "shape")
+          .attr("cx", (d) => d.cx)
+          .attr("cy", (d) => d.cy)
+          .attr("r", 0)
+          .attr("fill", () => randomColor())
+          .attr("opacity", 0.9);
+
+        sel
+          .transition()
+          .duration(500)
+          .attr("r", (d) => d.r);
+
+        attachHover(
+          sel,
+          (d) => {
+            const area = Math.PI * d.r * d.r;
+            return `<b>Circle</b><br/>r: ${d.r}<br/>area: ${area.toFixed(1)}`;
+          },
+          0.9,
+        );
+      }
+
+      function drawLines() {
+        const lines = [
+          { x1: 540, y1: 80, x2: 820, y2: 210, sw: 6 },
+          { x1: 540, y1: 210, x2: 820, y2: 80, sw: 3 },
+        ];
+
+        const sel = svg
+          .selectAll("line.shape")
+          .data(lines, (d, i) => `l${i}`)
+          .enter()
+          .append("line")
+          .attr("class", "shape")
+          .attr("x1", (d) => d.x1)
+          .attr("y1", (d) => d.y1)
+          .attr("x2", (d) => d.x1)
+          .attr("y2", (d) => d.y1)
+          .attr("stroke", () => randomColor())
+          .attr("stroke-width", (d) => d.sw)
+          .attr("stroke-linecap", "round")
+          .attr("opacity", 0.9);
+
+        sel
+          .transition()
+          .duration(650)
+          .attr("x2", (d) => d.x2)
+          .attr("y2", (d) => d.y2);
+
+        attachHover(
+          sel,
+          (d) => {
+            const len = Math.hypot(d.x2 - d.x1, d.y2 - d.y1);
+            return `<b>Line</b><br/>stroke-width: ${d.sw}<br/>length: ${len.toFixed(1)}`;
+          },
+          0.9,
+        );
+      }
+
+      function drawPolygon() {
+        const pts = [
+          [180, 310],
+          [100, 455],
+          [260, 455],
+        ];
+
+        const sel = svg
+          .append("polygon")
+          .datum(pts)
+          .attr("class", "shape")
+          .attr("points", pts.map((p) => p.join(",")).join(" "))
+          .attr("fill", randomColor())
+          .attr("stroke", "#111")
+          .attr("stroke-width", 2)
+          .attr("opacity", 0);
+
+        sel.transition().duration(450).attr("opacity", 0.9);
+
+        attachHover(
+          sel,
+          (p) => {
+            const signed = d3.polygonArea(p);
+            return `<b>Polygon</b><br/>points: ${p.length}<br/>signed area: ${signed.toFixed(2)}<br/>abs area: ${Math.abs(signed).toFixed(2)}`;
+          },
+          0.9,
+        );
+
+        console.log("Signed polygon area:", d3.polygonArea(pts));
+      }
+
+      function drawPath() {
+        const controlPoints = [
+          [420, 320],
+          [520, 280],
+          [640, 360],
+          [760, 310],
+          [840, 420],
+        ];
+
+        const d = d3.line().curve(d3.curveCatmullRom.alpha(0.6))(controlPoints);
+
+        const path = svg
+          .append("path")
+          .datum({ pts: controlPoints })
+          .attr("class", "shape")
+          .attr("d", d)
+          .attr("fill", "none")
+          .attr("stroke", randomColor())
+          .attr("stroke-width", 5)
+          .attr("stroke-linecap", "round")
+          .attr("opacity", 0.9);
+
+        const total = path.node().getTotalLength();
+        path
+          .attr("stroke-dasharray", `${total} ${total}`)
+          .attr("stroke-dashoffset", total)
+          .transition()
+          .duration(900)
+          .attr("stroke-dashoffset", 0);
+
+        attachHover(
+          path,
+          (obj) => {
+            return `<b>Path</b><br/>points: ${obj.pts.length}<br/>curve: Catmull-Rom<br/>animated stroke draw`;
+          },
+          0.9,
+        );
+      }
+
+      function drawAll() {
+        drawRectangles();
+        drawCircles();
+        drawLines();
+        drawPolygon();
+        drawPath();
+      }
+
+      document
+        .getElementById("btnRect")
+        .addEventListener("click", drawRectangles);
+      document
+        .getElementById("btnCircle")
+        .addEventListener("click", drawCircles);
+      document.getElementById("btnLine").addEventListener("click", drawLines);
+      document.getElementById("btnPoly").addEventListener("click", drawPolygon);
+      document.getElementById("btnPath").addEventListener("click", drawPath);
+      document.getElementById("btnAll").addEventListener("click", drawAll);
+      document
+        .getElementById("btnClear")
+        .addEventListener("click", clearCanvas);
+
+      drawAll();
     </script>
   </body>
 </html>
